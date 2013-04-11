@@ -73,9 +73,10 @@ nova-manage service disable --service nova-compute --host <hostname of your cont
 
 Log
 --------------------------
-* Originally written by Akira Yoshiyama, under Apache License,
-as a single node installation for beginers to try Folsom.
-* I(Koji Tanaka) modified it for making it work for multiple nodes, and 
-  added Cinder configuration.
+* Modified the script for Grizzly release.
 * Changed the messaging system from QPID to RabbitMQ.
 * Added the script to install a separate nova-compute node.
+* I(Koji Tanaka) modified it for making it work for multiple nodes, and 
+  added Cinder configuration.
+* This installation script is originally written by Akira Yoshiyama, 
+  under Apache License, as a single node installation for beginers to try Folsom.
