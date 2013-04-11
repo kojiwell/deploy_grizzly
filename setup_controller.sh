@@ -46,6 +46,7 @@ export DEBIAN_FRONTEND=noninteractive
     nova-objectstore \
     nova-network \
     nova-scheduler \
+    nova-nova-conductor \
     nova-doc \
     nova-console \
     nova-consoleauth \
@@ -64,7 +65,7 @@ echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
 ##############################################################################
 ## Configure memcached
 ##############################################################################
-sed -i "s/127.0.0.1/$CONTROLLER/" /etc/memcached.conf
+sed -i "s/127.0.0.1/$CONTROLLER_ADMIN_ADDRESS/" /etc/memcached.conf
 service memcached restart
 
 ##############################################################################
@@ -74,7 +75,7 @@ service memcached restart
 /bin/cat << EOF > openstack.sh
 #!/bin/bash
 
-NOVA="compute network scheduler cert consoleauth novncproxy api"
+NOVA="conductor compute network scheduler cert consoleauth novncproxy api"
 GLANCE="registry api"
 KEYSTONE=""
 CINDER="scheduler volume api"
@@ -175,21 +176,21 @@ keymap=en-us
 scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
 
 # OBJECT
-s3_host=$CONTROLLER
+s3_host=$CONTROLLER_PUBLIC_ADDRESS
 use_cow_images=yes
 
 # GLANCE
 image_service=nova.image.glance.GlanceImageService
-glance_api_servers=$CONTROLLER:9292
+glance_api_servers=$CONTROLLER_PUBLIC_ADDRESS:9292
 
 # RABBIT
-rabbit_host=$CONTROLLER
+rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
 rabbit_virtual_host=/nova
 rabbit_userid=nova
 rabbit_password=$RABBIT_PASS
 
 # DATABASE
-sql_connection=mysql://openstack:$MYSQLPASS@$CONTROLLER/nova
+sql_connection=mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/nova
 
 #use cinder
 enabled_apis=ec2,osapi_compute,metadata
@@ -197,7 +198,7 @@ volume_api_class=nova.volume.cinder.API
 
 #keystone
 auth_strategy=keystone
-keystone_ec2_url=http://$CONTROLLER:5000/v2.0/ec2tokens
+keystone_ec2_url=http://$CONTROLLER_PUBLIC_ADDRESS:5000/v2.0/ec2tokens
 EOF
 
 /bin/cat << EOF >> /etc/cinder/cinder.conf
@@ -210,37 +211,37 @@ osapi_volume_extension = cinder.api.openstack.volume.contrib.standard_extensions
 osapi_max_limit = 2000
 
 # RABBIT
-rabbit_host=$CONTROLLER
+rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
 rabbit_virtual_host=/nova
 rabbit_userid=nova
 rabbit_password=$RABBIT_PASS
 
 # MYSQL
-sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER/cinder
+sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/cinder
 EOF
 
-/bin/cat << EOF >> /etc/openstack-dashboard/local_settings.py
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'horizon',
-        'USER': 'openstack',
-        'PASSWORD': '$MYSQLPASS',
-        'HOST': '$CONTROPPER',
-        'default-character-set': 'utf8'
-    }
-}
-HORIZON_CONFIG = {
-    'dashboards': ('nova', 'syspanel', 'settings',),
-    'default_dashboard': 'nova',
-    'user_home': 'openstack_dashboard.views.user_home',
-}
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-EOF
+#/bin/cat << EOF >> /etc/openstack-dashboard/local_settings.py
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.mysql',
+#        'NAME': 'horizon',
+#        'USER': 'openstack',
+#        'PASSWORD': '$MYSQLPASS',
+#        'HOST': '$CONTROPPER',
+#        'default-character-set': 'utf8'
+#    }
+#}
+#HORIZON_CONFIG = {
+#    'dashboards': ('nova', 'syspanel', 'settings',),
+#    'default_dashboard': 'nova',
+#    'user_home': 'openstack_dashboard.views.user_home',
+#}
+#SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+#EOF
 
 CONF=/etc/nova/api-paste.ini
 /bin/sed \
-        -e "s/^auth_host *=.*/auth_host = $CONTROLLER/" \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/nova/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
@@ -248,45 +249,45 @@ CONF=/etc/nova/api-paste.ini
 
 CONF=/etc/glance/glance-api.conf
 /bin/sed \
-        -e "s/^auth_host *=.*/auth_host = $CONTROLLER/" \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/glance/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
-	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER\/glance/" \
+	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS\/glance/" \
 	-e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-api-paste.ini/' \
 	-e 's/^#*flavor *=.*/flavor = keystone/' \
         -e 's/^notifier_strategy *=.*/notifier_strategy = rabbit/' \
-        -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER/" \
+        -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER_INTERNAL_ADDRESS/" \
         -e 's/^rabbit_userid *=.*/rabbit_userid = nova/' \
         -e "s/^rabbit_password *=.*/rabbit_password = $RABBIT_PASS/" \
         -e "s/^rabbit_virtual_host *=.*/rabbit_virtual_host = \/nova/" \
-        -e "s/127.0.0.1/$CONTROLLER/" \
-        -e "s/localhost/$CONTROLLER/" \
+        -e "s/127.0.0.1/$CONTROLLER_PUBLIC_ADDRESS/" \
+        -e "s/localhost/$CONTROLLER_PUBLIC_ADDRESS/" \
 	$CONF.orig > $CONF
 
 CONF=/etc/glance/glance-registry.conf
 /bin/sed \
-        -e "s/^auth_host *=.*/auth_host = $CONTROLLER/" \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/glance/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
-	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER\/glance/" \
+	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS\/glance/" \
 	-e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-registry-paste.ini/' \
 	-e 's/^#*flavor *=.*/flavor=keystone/' \
-        -e "s/127.0.0.1/$CONTROLLER/" \
-        -e "s/localhost/$CONTROLLER/" \
+        -e "s/127.0.0.1/$CONTROLLER_PUBLIC_ADDRESS/" \
+        -e "s/localhost/$CONTROLLER_PUBLIC_ADDRESS/" \
 	$CONF.orig > $CONF
 
 CONF=/etc/keystone/keystone.conf
 /bin/sed \
-	-e "s/^#*connection *=.*/connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER\/keystone/" \
+	-e "s/^#*connection *=.*/connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS\/keystone/" \
 	-e "s/^#* *admin_token *=.*/admin_token = $ADMIN_PASSWORD/" \
 	$CONF.orig > $CONF
 
 CONF=/etc/cinder/api-paste.ini
 /bin/sed \
-        -e "s/^service_host *=.*/service_host = $CONTROLLER/" \
-        -e "s/^auth_host *=.*/auth_host = $CONTROLLER/" \
+        -e "s/^service_host *=.*/service_host = $CONTROLLER_PUBLIC_ADDRESS/" \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/cinder/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
@@ -341,11 +342,11 @@ GRANT ALL ON glance.*   TO 'openstack'@'localhost'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON nova.*     TO 'openstack'@'localhost'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON cinder.*   TO 'openstack'@'localhost'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON horizon.*   TO 'openstack'@'localhost'   IDENTIFIED BY '$MYSQLPASS';
-GRANT ALL ON keystone.* TO 'openstack'@'$CONTROLLER'   IDENTIFIED BY '$MYSQLPASS';
-GRANT ALL ON glance.*   TO 'openstack'@'$CONTROLLER'   IDENTIFIED BY '$MYSQLPASS';
-GRANT ALL ON nova.*     TO 'openstack'@'$CONTROLLER'   IDENTIFIED BY '$MYSQLPASS';
-GRANT ALL ON cinder.*   TO 'openstack'@'$CONTROLLER'   IDENTIFIED BY '$MYSQLPASS';
-GRANT ALL ON horizon.*   TO 'openstack'@'$CONTROLLER'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON keystone.* TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON glance.*   TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON nova.*     TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON cinder.*   TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON horizon.*   TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON keystone.* TO 'openstack'@'$MYSQL_ACCESS'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON glance.*   TO 'openstack'@'$MYSQL_ACCESS'   IDENTIFIED BY '$MYSQLPASS';
 GRANT ALL ON nova.*     TO 'openstack'@'$MYSQL_ACCESS'   IDENTIFIED BY '$MYSQLPASS';
@@ -379,8 +380,11 @@ sleep 5
 ## Create a sample data on Keystone
 ##############################################################################
 
-/bin/sed -e "s/localhost/$CONTROLLER/g" \
-         -e "s/127.0.0.1/$CONTROLLER/g" \
+/bin/sed -e "s/pass=secrete/pass=$ADMIN_PASSWORD/g" \
+         -e "s/pass=glance/pass=$ADMIN_PASSWORD/g" \
+         -e "s/pass=nova/pass=$ADMIN_PASSWORD/g" \
+         -e "s/pass=ec2/pass=$ADMIN_PASSWORD/g" \
+         -e "s/pass=swiftpass/pass=$ADMIN_PASSWORD/g" \
          /usr/share/keystone/sample_data.sh > /tmp/sample_data.sh
 /bin/bash -x /tmp/sample_data.sh
 
@@ -392,7 +396,7 @@ sleep 5
 export OS_USERNAME=admin
 export OS_PASSWORD=$ADMIN_PASSWORD
 export OS_TENANT_NAME=demo
-export OS_AUTH_URL=http://$CONTROLLER:5000/v2.0
+export OS_AUTH_URL=http://$CONTROLLER_ADMIN_ADDRESS:35357/v2.0
 export OS_NO_CACHE=1
 EOF
 
@@ -400,7 +404,7 @@ EOF
 export OS_USERNAME=demo
 export OS_PASSWORD=$ADMIN_PASSWORD
 export OS_TENANT_NAME=demo
-export OS_AUTH_URL=http://$CONTROLLER:5000/v2.0
+export OS_AUTH_URL=http://$CONTROLLER_PUBLIC_ADDRESS:5000/v2.0
 export OS_NO_CACHE=1
 EOF
 
@@ -412,7 +416,7 @@ source admin_credential
 keystone endpoint-delete $(keystone endpoint-list | grep 8776 | awk '{print $2}')
 keystone service-delete $(keystone service-list | grep volume | awk '{print $2}')
 SERVICE_PASSWORD=$ADMIN_PASSWORD
-SERVICE_HOST=$CONTROLLER
+SERVICE_HOST=$CONTROLLER_PUBLIC_ADDRESS
 
 function get_id () {
     echo `"$@" | awk '/ id / { print $4 }'`
@@ -436,9 +440,9 @@ CINDER_SERVICE=$(get_id keystone service-create \
 keystone endpoint-create \
         --region RegionOne \
         --service_id $CINDER_SERVICE \
-        --publicurl "http://$SERVICE_HOST:8776/v1/\$(tenant_id)s" \
-        --adminurl "http://$SERVICE_HOST:8776/v1/\$(tenant_id)s" \
-        --internalurl "http://$SERVICE_HOST:8776/v1/\$(tenant_id)s"
+        --publicurl "http://$CONTROLLER_PUBLIC_ADDRESS:8776/v1/\$(tenant_id)s" \
+        --adminurl "http://$CONTROLLER_ADMIN_ADDRESS:8776/v1/\$(tenant_id)s" \
+        --internalurl "http://$CONTROLLER_INTERNAL_ADDRESS:8776/v1/\$(tenant_id)s"
 
 ##############################################################################
 ## Create a nova network
@@ -452,21 +456,21 @@ keystone endpoint-create \
 	--network_size=256 \
         --multi_host=T
 
-CONF=/etc/rc.local
-test -f $CONF.orig || cp $CONF $CONF.orig
-/bin/cat << EOF > $CONF
-#!/bin/sh -e
+#CONF=/etc/rc.local
+#test -f $CONF.orig || cp $CONF $CONF.orig
+#/bin/cat << EOF > $CONF
+##!/bin/sh -e
+##
+## rc.local
+##
+## This script is executed at the end of each multiuser runlevel.
+## Make sure that the script will "exit 0" on success or any other
+## value on error.
 #
-# rc.local
+#iptables -A POSTROUTING -t mangle -p udp --dport 68 -j CHECKSUM --checksum-fill
 #
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-
-iptables -A POSTROUTING -t mangle -p udp --dport 68 -j CHECKSUM --checksum-fill
-
-exit 0
-EOF
+#exit 0
+#EOF
 
 ##############################################################################
 ## Start all srevices
