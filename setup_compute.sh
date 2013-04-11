@@ -147,25 +147,6 @@ auth_strategy=keystone
 keystone_ec2_url=http://$CONTROLLER_PUBLIC_ADDRESS:5000/v2.0/ec2tokens
 EOF
 
-/bin/cat << EOF >> /etc/cinder/cinder.conf
-# LOGGING
-log_file=cinder.log
-log_dir=/var/log/cinder
-
-# OSAPI
-osapi_volume_extension = cinder.api.openstack.volume.contrib.standard_extensions
-osapi_max_limit = 2000
-
-# RABBIT
-rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
-rabbit_virtual_host=/nova
-rabbit_userid=nova
-rabbit_password=$RABBIT_PASS
-
-# MYSQL
-sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/cinder
-EOF
-
 CONF=/etc/nova/api-paste.ini
 /bin/sed \
         -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
@@ -175,22 +156,6 @@ CONF=/etc/nova/api-paste.ini
 	$CONF.orig > $CONF
 
 chown -R nova /etc/nova
-
-CONF=/etc/rc.local
-test -f $CONF.orig || cp $CONF $CONF.orig
-/bin/cat << EOF > $CONF
-#!/bin/sh -e
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-
-iptables -A POSTROUTING -t mangle -p udp --dport 68 -j CHECKSUM --checksum-fill
-
-exit 0
-EOF
 
 ##############################################################################
 ## Start all srevices
