@@ -1,7 +1,7 @@
 Installation Script of OpenStack Folsom for Ubuntu-13.04
 ======================================================
 
-This script installs OpenStack Folsom on Ubuntu-13.04
+This script installs OpenStack Grizzly on Ubuntu-13.04
 
 * setuprc - is configuration file
 * setup_controller.sh - Installs Keystone, Glance, Cinder and Nova.
