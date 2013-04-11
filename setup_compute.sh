@@ -122,21 +122,21 @@ keymap=en-us
 scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
 
 # OBJECT
-s3_host=$CONTROLLER
+s3_host=$CONTROLLER_PUBLIC_ADDRESS
 use_cow_images=yes
 
 # GLANCE
 image_service=nova.image.glance.GlanceImageService
-glance_api_servers=$CONTROLLER:9292
+glance_api_servers=$CONTROLLER_PUBLIC_ADDRESS:9292
 
 # RABBIT
-rabbit_host=$CONTROLLER
+rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
 rabbit_virtual_host=/nova
 rabbit_userid=nova
 rabbit_password=$RABBIT_PASS
 
 # DATABASE
-sql_connection=mysql://openstack:$MYSQLPASS@$CONTROLLER/nova
+sql_connection=mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/nova
 
 #use cinder
 enabled_apis=ec2,osapi_compute,metadata
@@ -144,12 +144,31 @@ volume_api_class=nova.volume.cinder.API
 
 #keystone
 auth_strategy=keystone
-keystone_ec2_url=http://$CONTROLLER:5000/v2.0/ec2tokens
+keystone_ec2_url=http://$CONTROLLER_PUBLIC_ADDRESS:5000/v2.0/ec2tokens
+EOF
+
+/bin/cat << EOF >> /etc/cinder/cinder.conf
+# LOGGING
+log_file=cinder.log
+log_dir=/var/log/cinder
+
+# OSAPI
+osapi_volume_extension = cinder.api.openstack.volume.contrib.standard_extensions
+osapi_max_limit = 2000
+
+# RABBIT
+rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
+rabbit_virtual_host=/nova
+rabbit_userid=nova
+rabbit_password=$RABBIT_PASS
+
+# MYSQL
+sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/cinder
 EOF
 
 CONF=/etc/nova/api-paste.ini
 /bin/sed \
-        -e "s/^auth_host *=.*/auth_host = $CONTROLLER/" \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_ADMIN_ADDRESS/" \
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/nova/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \

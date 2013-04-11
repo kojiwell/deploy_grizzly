@@ -46,7 +46,7 @@ export DEBIAN_FRONTEND=noninteractive
     nova-objectstore \
     nova-network \
     nova-scheduler \
-    nova-nova-conductor \
+    nova-conductor \
     nova-doc \
     nova-console \
     nova-consoleauth \
