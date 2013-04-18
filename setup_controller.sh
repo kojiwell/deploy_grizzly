@@ -253,8 +253,8 @@ CONF=/etc/glance/glance-api.conf
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/glance/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
-	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS\/glance/" \
-	-e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-api-paste.ini/' \
+	-e "s#^sql_connection *=.*#sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/glance#" \
+	-e 's[^#* *config_file *=.*[config_file = /etc/glance/glance-api-paste.ini[' \
 	-e 's/^#*flavor *=.*/flavor = keystone/' \
         -e 's/^notifier_strategy *=.*/notifier_strategy = rabbit/' \
         -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER_INTERNAL_ADDRESS/" \
