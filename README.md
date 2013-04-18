@@ -1,7 +1,7 @@
-Installation Script of OpenStack Folsom for Ubuntu-12.10
+Installation Script of OpenStack Folsom for Ubuntu-13.04
 ======================================================
 
-This script installs OpenStack Folsom on Ubuntu-12.10
+This script installs OpenStack Grizzly on Ubuntu-13.04
 
 * setuprc - is configuration file
 * setup_controller.sh - Installs Keystone, Glance, Cinder and Nova.
@@ -11,8 +11,8 @@ How to
 ------
 Download.
 ```
-git clone https://github.com/kjtanaka/deploy_folsom.git
-cd deploy_folsom
+git clone https://github.com/kjtanaka/deploy_grizzly.git
+cd deploy_grizzly
 ```
 
 Create setuprc:
@@ -24,17 +24,20 @@ Modify setuprc:
 ```
 # setuprc - configuration file for deploying OpenStack
 
-PASSWORD="DoNotMakeThisEasy"
+export PASSWORD=${CONTROLLER_PUBLIC_ADDRESS:-DoNotMakeThisEasy}
 export ADMIN_PASSWORD=$PASSWORD
 export SERVICE_PASSWORD=$PASSWORD
 export ENABLE_ENDPOINTS=1
 MYSQLPASS=$PASSWORD
-QPID_PASS=$PASSWORD
-CONTROLLER="192.168.1.1"
+RABBIT_PASS=$PASSWORD
+export CONTROLLER_PUBLIC_ADDRESS=""
+export CONTROLLER_ADMIN_ADDRESS="192.168.1.1"
+export CONTROLLER_INTERNAL_ADDRESS=$CONTROLLER_ADMIN_ADDRESS
 FIXED_RANGE="192.168.201.0/24"
 MYSQL_ACCESS="192.168.1.%"
-PUBLIC_INTERFACE="br101"
+PUBLIC_INTERFACE="eth1"
 FLAT_INTERFACE="eth0"
+#CINDER_VOL=/dev/sda5
 ```
 
 For controller node.
@@ -70,8 +73,10 @@ nova-manage service disable --service nova-compute --host <hostname of your cont
 
 Log
 --------------------------
-* Originally written by Akira Yoshiyama, under Apache License,
-as a single node installation for beginers to try Folsom.
-* I(Koji Tanaka) modified and added Cinder configuration.
+* Modified the script for Grizzly release.
 * Changed the messaging system from QPID to RabbitMQ.
 * Added the script to install a separate nova-compute node.
+* I(Koji Tanaka) modified it for making it work for multiple nodes, and 
+  added Cinder configuration.
+* This installation script is originally written by Akira Yoshiyama, 
+  under Apache License, as a single node installation for beginers to try Folsom.
