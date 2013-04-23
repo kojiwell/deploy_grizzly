@@ -1,9 +1,7 @@
 #!/bin/bash -xe
 #
-# Author: Akira Yoshiyama
-# 
-# Modfied by Koji Tanaka for adjusting parameters 
-# for FutureGrid Resources and also for FG Users
+# Authors: Akira Yoshiyama
+#          Koji Tanaka, Indiana University
 #
 
 source setuprc
