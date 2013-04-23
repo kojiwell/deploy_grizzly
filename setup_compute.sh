@@ -1,9 +1,6 @@
 #!/bin/bash -xe
 #
-# Author: Akira Yoshiyama
-# 
-# Modfied by Koji Tanaka for adjusting parameters 
-# for FutureGrid Resources and also for FG Users
+# setup_compute.sh - installs Nova compute on Ubuntu-13.04.
 #
 
 source setuprc

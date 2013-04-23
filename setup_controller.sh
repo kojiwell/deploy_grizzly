@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 #
-# Authors: Akira Yoshiyama
-#          Koji Tanaka, Indiana University
+# setup_controller.sh - installs Keystone, Glance, Cinder, Nova, 
+# Horizon of OpenStack Grizzly on Ubuntu 13.04.
 #
 
 source setuprc
