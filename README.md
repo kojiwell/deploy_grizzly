@@ -1,4 +1,4 @@
-Installation Script of OpenStack Folsom for Ubuntu-13.04
+Installation Script of OpenStack Grizzly for Ubuntu-13.04
 ======================================================
 
 This script installs OpenStack Grizzly on Ubuntu-13.04
