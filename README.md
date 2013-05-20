@@ -24,7 +24,7 @@ Modify setuprc:
 ```
 # setuprc - configuration file for deploying OpenStack
 
-export PASSWORD=${CONTROLLER_PUBLIC_ADDRESS:-DoNotMakeThisEasy}
+export PASSWORD=DoNotMakeThisEasy
 export ADMIN_PASSWORD=$PASSWORD
 export SERVICE_PASSWORD=$PASSWORD
 export ENABLE_ENDPOINTS=1

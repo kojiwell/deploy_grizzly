@@ -358,10 +358,10 @@ EOF
 ## Initialize databases of Nova, Glance and Keystone
 ##############################################################################
 
-if [ -n $CINDER_VOL ]; then
-    pvcreate $CINDER_VOL
-    vgcreate cinder-volumes $CINDER_VOL
-fi
+#if [ -n $CINDER_VOL ]; then
+#    pvcreate $CINDER_VOL
+#    vgcreate cinder-volumes $CINDER_VOL
+#fi
 
 /usr/bin/keystone-manage db_sync
 /usr/bin/glance-manage db_sync
