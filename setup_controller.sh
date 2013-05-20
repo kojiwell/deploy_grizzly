@@ -1,9 +1,7 @@
 #!/bin/bash -xe
 #
-# Author: Akira Yoshiyama
-# 
-# Modfied by Koji Tanaka for adjusting parameters 
-# for FutureGrid Resources and also for FG Users
+# setup_controller.sh - installs Keystone, Glance, Cinder, Nova, 
+# Horizon of OpenStack Grizzly on Ubuntu 13.04.
 #
 
 source setuprc

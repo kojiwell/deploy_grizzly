@@ -1,4 +1,4 @@
-Installation Script of OpenStack Folsom for Ubuntu-13.04
+Installation Script of OpenStack Grizzly for Ubuntu-13.04
 ======================================================
 
 This script installs OpenStack Grizzly on Ubuntu-13.04
@@ -71,12 +71,11 @@ If you want stop nova-compute on the controller, you can disable it by this.
 nova-manage service disable --service nova-compute --host <hostname of your controller>
 ```
 
-Log
+License
 --------------------------
-* Modified the script for Grizzly release.
-* Changed the messaging system from QPID to RabbitMQ.
-* Added the script to install a separate nova-compute node.
-* I(Koji Tanaka) modified it for making it work for multiple nodes, and 
-  added Cinder configuration.
-* This installation script is originally written by Akira Yoshiyama, 
-  under Apache License, as a single node installation for beginers to try Folsom.
+The scripts are developed under Apache License.
+
+Authors
+--------------------------
+* Akira Yoshiyama
+* Koji Tanaka, Indiana University
