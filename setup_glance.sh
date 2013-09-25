@@ -1,9 +1,7 @@
 #!/bin/bash -xe
 #
-# Author: Akira Yoshiyama
-# 
-# Modfied by Koji Tanaka for adjusting parameters 
-# for FutureGrid Resources and also for FG Users
+# setup_controller.sh - installs Keystone, Glance, Cinder, Nova, 
+# Horizon of OpenStack Grizzly on Ubuntu 13.04.
 #
 
 source setuprc
@@ -24,18 +22,6 @@ export DEBIAN_FRONTEND=noninteractive
     python-mysqldb \
     python-memcache \
     glance
-
-##############################################################################
-## Disable IPv6
-##############################################################################
-echo '127.0.0.1 localhost' > /etc/hosts
-echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
-
-##############################################################################
-## Configure memcached
-##############################################################################
-sed -i "s/127.0.0.1/$CONTROLLER_ADMIN_ADDRESS/" /etc/memcached.conf
-service memcached restart
 
 ##############################################################################
 ## Make a script to start/stop all services
@@ -73,7 +59,7 @@ EOF
 ##############################################################################
 
 for i in /etc/glance/glance-api.conf \
-	 /etc/glance/glance-registry.conf
+	 /etc/glance/glance-registry.conf \
 do
 	test -f $i.orig || /bin/cp $i $i.orig
 done
@@ -84,8 +70,8 @@ CONF=/etc/glance/glance-api.conf
 	-e 's/%SERVICE_TENANT_NAME%/service/' \
 	-e 's/%SERVICE_USER%/glance/' \
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
-	-e "s/^sql_connection *=.*/sql_connection = mysql:\/\/openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS\/glance/" \
-	-e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-api-paste.ini/' \
+	-e "s#^sql_connection *=.*#sql_connection = mysql://openstack:$MYSQLPASS@$CONTROLLER_INTERNAL_ADDRESS/glance#" \
+	-e 's[^#* *config_file *=.*[config_file = /etc/glance/glance-api-paste.ini[' \
 	-e 's/^#*flavor *=.*/flavor = keystone/' \
         -e 's/^notifier_strategy *=.*/notifier_strategy = rabbit/' \
         -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER_INTERNAL_ADDRESS/" \
@@ -110,22 +96,27 @@ CONF=/etc/glance/glance-registry.conf
 	$CONF.orig > $CONF
 
 chown -R glance /etc/glance
-/usr/bin/glance-manage db_sync
 
 ##############################################################################
-## Create credentials
+## Create MySQL accounts and databases of Nova, Glance, Keystone and Cinder
 ##############################################################################
 
-/bin/cat << EOF > admin_credential
-export OS_USERNAME=admin
-export OS_PASSWORD=$ADMIN_PASSWORD
-export OS_TENANT_NAME=demo
-export OS_AUTH_URL=http://$CONTROLLER_ADMIN_ADDRESS:35357/v2.0
-export OS_NO_CACHE=1
+/bin/cat << EOF | /usr/bin/mysql -uroot -p$MYSQLPASS
+DROP DATABASE IF EXISTS glance;
+CREATE DATABASE glance;
+GRANT ALL ON glance.*   TO 'openstack'@'localhost'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON glance.*   TO 'openstack'@'$CONTROLLER_ADMIN_ADDRESS'   IDENTIFIED BY '$MYSQLPASS';
+GRANT ALL ON glance.*   TO 'openstack'@'$MYSQL_ACCESS'   IDENTIFIED BY '$MYSQLPASS';
 EOF
 
 ##############################################################################
-## Start all srevices
+## Initialize databases of Nova, Glance and Keystone
+##############################################################################
+
+/usr/bin/glance-manage db_sync
+
+##############################################################################
+## Start Glance
 ##############################################################################
 
 ./glance.sh start
@@ -136,15 +127,13 @@ sleep 5
 ##############################################################################
 
 http_proxy=$HTTP_PROXY /usr/bin/wget \
-http://uec-images.ubuntu.com/releases/quantal/release/ubuntu-12.10-server-cloudimg-amd64-disk1.img
+http://cloud-images.ubuntu.com/raring/current/raring-server-cloudimg-amd64-disk1.img
 
 source admin_credential
 /usr/bin/glance image-create \
-	--name ubuntu-12.10 \
+	--name ubuntu-13.04 \
 	--disk-format qcow2 \
 	--container-format bare \
-	--file ubuntu-12.10-server-cloudimg-amd64-disk1.img
+	--file raring-server-cloudimg-amd64-disk1.img
 
-/bin/rm -f ubuntu-12.10-server-cloudimg-amd64-disk1.img
-
-echo "Glance installation finished."
+/bin/rm -f raring-server-cloudimg-amd64-disk1.img
