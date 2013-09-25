@@ -59,7 +59,7 @@ EOF
 ##############################################################################
 
 for i in /etc/glance/glance-api.conf \
-	 /etc/glance/glance-registry.conf \
+	 /etc/glance/glance-registry.conf
 do
 	test -f $i.orig || /bin/cp $i $i.orig
 done
