@@ -150,7 +150,7 @@ CONF=/etc/nova/api-paste.ini
 	-e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
 	$CONF.orig > $CONF
 
-chown -R /etc/nova
+chown -R nova /etc/nova
 
 ##############################################################################
 ## Create MySQL accounts and databases of Nova, Glance, Keystone and Cinder
