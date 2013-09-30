@@ -120,8 +120,6 @@ test -f $CONF.orig || cp $CONF $CONF.orig
         -e 's/^notifier_strategy *=.*/notifier_strategy = rabbit/' \
         -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER_INTERNAL_ADDRESS/" \
         -e "s/^rabbit_password *=.*/rabbit_password = $RABBITMQ_PASSWORD/" \
-        -e "s/127.0.0.1/$CONTROLLER_PUBLIC_ADDRESS/" \
-        -e "s/localhost/$CONTROLLER_PUBLIC_ADDRESS/" \
         $CONF.orig > $CONF
 
 CONF=/etc/glance/glance-registry.conf
@@ -134,8 +132,6 @@ test -f $CONF.orig || cp $CONF $CONF.orig
         -e "s/^sql_connection *=.*/sql_connection = mysql:\/\/glance:$MYSQL_DB_PASSWORD@localhost\/glance/" \
         -e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-registry-paste.ini/' \
         -e 's/^#*flavor *=.*/flavor=keystone/' \
-        -e "s/127.0.0.1/$CONTROLLER_INTERNAL_ADDRESS/" \
-        -e "s/localhost/$CONTROLLER_INTERNAL_ADDRESS/" \
         $CONF.orig > $CONF
 }
 
