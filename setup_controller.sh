@@ -151,6 +151,9 @@ rm -f /tmp/$IMAGE
 glance image-list
 }
 
+#=============================================================================
+# OpenStack Compute (Cloud Controller services)
+#=============================================================================
 function setup_nova() {
 apt-get install -y \
         nova-api \
@@ -163,17 +166,52 @@ apt-get install -y \
         nova-consoleauth \
         novnc \
         nova-novncproxy
+
+CONF=/etc/nova/api-paste.ini
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/sed \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_INTERNAL_ADDRESS/" \
+        -e 's/%SERVICE_TENANT_NAME%/service/' \
+        -e 's/%SERVICE_USER%/nova/' \
+        -e "s/%SERVICE_PASSWORD%/$ADMIN_PASSWORD/" \
+        $CONF.orig > $CONF
+
 CONF=/etc/nova/nova.conf
 test -f $CONF.orig || cp $CONF $CONF.orig
 /bin/cat << NOVACONF > $CONF
 [DEFAULT]
-
-sql_connection=mysql://nova:$MYSQL_DB_PASSWORD@localhost/nova
-my_ip=$MY_IP_ADDRESS
+my_ip=$CONTROLLER_INTERNAL_ADDRESS
+logdir=/var/log/nova
+state_path=/var/lib/nova
+lock_path=/run/lock/nova
+verbose=True
+api_paste_config=/etc/nova/api-paste.ini
+scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
+rabbit_host=localhost
+rabbit_virtual_host=/
+rabbit_userid=guest
 rabbit_password=$RABBITMQ_PASSWORD
+nova_url=http://$CONTROLLER_INTERNAL_ADDRESS:8774/v1.1/
+sql_connection=mysql://nova:$MYSQL_DB_PASSWORD@localhost/nova
+root_helper=sudo nova-rootwrap /etc/nova/rootwrap.conf
+
+#auth
+use_deprecated_auth=false
 auth_strategy=keystone
 
-# Networking
+#glance
+glance_api_servers=$CONTROLLER_INTERNAL_ADDRESS:9292
+image_service=nova.image.glance.GlanceImageService
+
+#vnc
+novnc_enabled=true
+novncproxy_base_url=http://$CONTROLLER_INTERNAL_ADDRESS:6080/vnc_auto.html
+novncproxy_port=6080
+vncserver_proxyclient_address=\$my_ip
+vncserver_listen=0.0.0.0
+keymap=en-us
+
+#quantum
 network_api_class=nova.network.quantumv2.api.API
 quantum_url=http://$CONTROLLER_INTERNAL_ADDRESS:9696
 quantum_auth_strategy=keystone
@@ -183,29 +221,19 @@ quantum_admin_password=$KEYSTONE_ADMIN_PASSWORD
 quantum_admin_auth_url=http://$CONTROLLER_INTERNAL_ADDRESS:35357/v2.0
 libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver
 linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
-
-# Security Groups
 firewall_driver=nova.virt.firewall.NoopFirewallDriver
 security_group_api=quantum
 
-# Metadata
+#metadata
+service_quantum_metadata_proxy=True
 quantum_metadata_proxy_shared_secret=$QUANTUM_SHARED_SECRET
-service_quantum_metadata_proxy=true
-metadata_listen = $CONTROLLER_INTERNAL_ADDRESS
-metadata_listen_port = 8775
 
-# Cinder
+#compute
+compute_driver=libvirt.LibvirtDriver
+
+#cinder
 volume_api_class=nova.volume.cinder.API
-
-# Glance
-glance_api_servers=$CONTROLLER_INTERNAL_ADDRESS:9292
-image_service=nova.image.glance.GlanceImageService
-
-# novnc
-novnc_enable=true
-novncproxy_port=6080
-novncproxy_host=$CONTROLLER_PUBLIC_ADDRESS
-vncserver_listen=0.0.0.0
+osapi_volume_listen_port=5900
 NOVACONF
 nova-manage db sync
 service nova-api restart
