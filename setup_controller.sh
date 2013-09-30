@@ -84,7 +84,7 @@ apt-get install -y keystone python-keystone python-keystoneclient
 CONF=/etc/keystone/keystone.conf
 test -f $CONF.orig || cp $CONF $CONF.orig
 sed \
-   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@$CONTROLLER_INTERNAL_ADDRESS\/keystone/" \
+   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@localhost\/keystone/" \
    -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
    $CONF.orig > $CONF
 service keystone restart
