@@ -1,4 +1,5 @@
 #!/bin/bash -xe
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 #
 # setup_controller.sh - installs Keystone, Glance, Cinder, Nova, 
 # Horizon of OpenStack Grizzly on Ubuntu 13.04.
@@ -147,6 +148,71 @@ glance image-create --is-public true \
         --name "Ubuntu-12.04" \
         --file /tmp/$IMAGE
 rm -f /tmp/$IMAGE
+glance image-list
+}
+
+function setup_nova() {
+apt-get install -y \
+        nova-api \
+        nova-cert \
+        nova-common \
+        nova-conductor \
+        nova-scheduler \
+        python-nova \
+        python-novaclient \
+        nova-consoleauth \
+        novnc \
+        nova-novncproxy
+CONF=/etc/nova/nova.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/cat << NOVACONF > $CONF
+[DEFAULT]
+
+sql_connection=mysql://nova:$MYSQL_DB_PASSWORD@localhost/nova
+my_ip=$MY_IP_ADDRESS
+rabbit_password=$RABBITMQ_PASSWORD
+auth_strategy=keystone
+
+# Networking
+network_api_class=nova.network.quantumv2.api.API
+quantum_url=http://$CONTROLLER_INTERNAL_ADDRESS:9696
+quantum_auth_strategy=keystone
+quantum_admin_tenant_name=service
+quantum_admin_username=quantum
+quantum_admin_password=$KEYSTONE_ADMIN_PASSWORD
+quantum_admin_auth_url=http://$CONTROLLER_INTERNAL_ADDRESS:35357/v2.0
+libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver
+linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
+
+# Security Groups
+firewall_driver=nova.virt.firewall.NoopFirewallDriver
+security_group_api=quantum
+
+# Metadata
+quantum_metadata_proxy_shared_secret=$QUANTUM_SHARED_SECRET
+service_quantum_metadata_proxy=true
+metadata_listen = $CONTROLLER_INTERNAL_ADDRESS
+metadata_listen_port = 8775
+
+# Cinder
+volume_api_class=nova.volume.cinder.API
+
+# Glance
+glance_api_servers=$CONTROLLER_INTERNAL_ADDRESS:9292
+image_service=nova.image.glance.GlanceImageService
+
+# novnc
+novnc_enable=true
+novncproxy_port=6080
+novncproxy_host=$CONTROLLER_PUBLIC_ADDRESS
+vncserver_listen=0.0.0.0
+NOVACONF
+nova-manage db sync
+service nova-api restart
+service nova-cert restart
+service nova-consoleauth restart
+service nova-scheduler restart
+service nova-novncproxy restart
 }
 
 function old_scripts() {
