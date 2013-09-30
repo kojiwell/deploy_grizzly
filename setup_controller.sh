@@ -304,6 +304,7 @@ apt-get -y install openstack-dashboard memcached python-memcache
 apt-get -y remove --purge openstack-dashboard-ubuntu-theme
 }
 
+
 function old_scripts() {
 ##############################################################################
 ## Configure memcached
