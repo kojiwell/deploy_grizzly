@@ -133,6 +133,20 @@ test -f $CONF.orig || cp $CONF $CONF.orig
         -e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-registry-paste.ini/' \
         -e 's/^#*flavor *=.*/flavor=keystone/' \
         $CONF.orig > $CONF
+service glance-api restart && service glance-registry restart
+glance-manage db_sync
+}
+
+function setup_ubuntu_1204_image() {
+source ~/openrc
+IMAGE=precise-server-cloudimg-amd64-disk1.img
+wget http://uec-images.ubuntu.com/precise/current/$IMAGE -P /tmp
+glance image-create --is-public true \
+        --disk-format qcow2 \
+        --container-format bare \
+        --name "Ubuntu-12.04" \
+        --file /tmp/$IMAGE
+rm -f /tmp/$IMAGE
 }
 
 function old_scripts() {
