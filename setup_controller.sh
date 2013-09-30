@@ -78,11 +78,20 @@ function setup_keystone() {
 apt-get install -y keystone python-keystone python-keystoneclient
 CONF=/etc/keystone/keystone.conf
 test -f $CONF.orig || cp $CONF $CONF.orig
-/bin/sed \
-        -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@$CONTROLLER_INTERNAL_ADDRESS\/keystone/" \
-        -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
-        $CONF.orig > $CONF
-
+sed \
+   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@$CONTROLLER_INTERNAL_ADDRESS\/keystone/" \
+   -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
+   $CONF.orig > $CONF
+service keystone restart
+keystone-manage db_sync
+cat << OPENRC > ~/openrc
+export OS_TENANT_NAME=admin
+export OS_USERNAME=admin
+export OS_PASSWORD=$KEYSTONE_ADMIN_PASSWORD
+export OS_AUTH_URL="http://localhost:5000/v2.0/"
+export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
+export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
+OPENRC
 }
 
 function old_scripts() {
