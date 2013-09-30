@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 #
-# setup_controller.sh - installs Keystone, Glance, Cinder, Nova, 
+# setup_keystone.sh - installs Keystone.
 # Horizon of OpenStack Grizzly on Ubuntu 13.04.
 #
 
