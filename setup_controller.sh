@@ -10,8 +10,16 @@ HTTP_PROXY=$http_proxy
 unset http_proxy
 
 ##############################################################################
-## Install necessary packages
+## Common services
 ##############################################################################
+
+CONF=/etc/sysctl.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+echo 'net.ipv4.conf.all.rp_filter = 0' >> /etc/sysctl.conf
+echo 'net.ipv4.conf.default.rp_filter = 0' >> /etc/sysctl.conf
+service networking restart
+sysctl -e -p /etc/sysctl.conf
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -20,45 +28,32 @@ export DEBIAN_FRONTEND=noninteractive
 /usr/bin/aptitude -y install \
     ntp \
     python-mysqldb \
-    python-memcache \
-    rabbitmq-server \
-    mysql-server \
-    memcached \
-    open-iscsi \
-    open-iscsi-utils \
-    kvm \
-    kvm-ipxe \
-    libvirt-bin \
-    bridge-utils \
-    python-libvirt \
-    keystone \
-    glance \
-    cinder-api \
-    cinder-scheduler \
-    cinder-volume \
-    python-cinderclient \
-    tgt \
-    nova-api \
-    nova-cert \
-    nova-compute \
-    nova-objectstore \
-    nova-network \
-    nova-scheduler \
-    nova-conductor \
-    nova-doc \
-    nova-console \
-    nova-consoleauth \
-    nova-novncproxy \
-    websockify \
-    novnc \
-    openstack-dashboard \
-    libapache2-mod-wsgi
+    mysql-server
 
-##############################################################################
-## Disable IPv6
-##############################################################################
-#echo '127.0.0.1 localhost' > /etc/hosts
-echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+mysqladmin -u root password $MYSQL_ROOT_PASSWORD
+sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
+service mysql restart
+
+mysql -u root -p$MYSQL_ROOT_PASSWORD <<EOF
+CREATE DATABASE nova;
+GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+CREATE DATABASE cinder;
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+CREATE DATABASE glance;
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+CREATE DATABASE keystone;
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+CREATE DATABASE quantum;
+GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'localhost' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'$MYSQL_ALLOWED_SUBNET' \
+	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+FLUSH PRIVILEGES;
+EOF
 
 ##############################################################################
 ## Configure memcached
