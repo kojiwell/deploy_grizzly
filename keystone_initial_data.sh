@@ -1,4 +1,12 @@
 #!/bin/bash
+# keystone_initial_data.sh - populates Keystone with some initial data:
+# * Projects: admin and services
+# * Roles: admin, Member
+# * Users: admin, demo, nova, glance, quantum, and cinder
+# * Services: compute, volume, image, identity, ec2, and network
+#
+# * This script is copied from the following link. 
+# http://docs.openstack.org/grizzly/basic-install/apt/content/basic-install_controller.html
 
 # Modify these variables as needed
 ADMIN_PASSWORD=${KEYSTONE_ADMIN_PASSWORD:-password}

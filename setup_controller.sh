@@ -97,8 +97,9 @@ function setup_keystone() {
 #export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
 #export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
 #OPENRC
+source ~/openrc
 echo "source ~/openrc" >> ~/.bashrc
-
+bash -ex keystone_initial_data.sh
 }
 
 function old_scripts() {
