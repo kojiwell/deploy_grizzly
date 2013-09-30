@@ -243,6 +243,67 @@ service nova-scheduler restart
 service nova-novncproxy restart
 }
 
+
+#=============================================================================
+# OpenStack Network Service (Cloud Controller)
+#=============================================================================
+function setup_quantum() {
+apt-get install -y quantum-server
+
+CONF=/etc/quantum/quantum.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/cat << QUANTUMCONF > $CONF
+[DEFAULT]
+lock_path = \$state_path/lock
+bind_host = 0.0.0.0
+bind_port = 9696
+core_plugin = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPluginV2
+api_paste_config = /etc/quantum/api-paste.ini
+control_exchange = quantum
+rpc_backend = quantum.openstack.common.rpc.impl_kombu
+rabbit_host=$CONTROLLER_INTERNAL_ADDRESS
+rabbit_userid=guest
+rabbit_password=$RABBITMQ_PASSWORD
+rabbit_virtual_host=/
+notification_driver = quantum.openstack.common.notifier.rpc_notifier
+default_notification_level = INFO
+notification_topics = notifications
+[QUOTAS]
+[DEFAULT_SERVICETYPE]
+[AGENT]
+root_helper = sudo quantum-rootwrap /etc/quantum/rootwrap.conf
+[keystone_authtoken]
+auth_host = localhost
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = quantum
+admin_password = $KEYSTONE_ADMIN_PASSWORD
+signing_dir = /var/lib/quantum/keystone-signing
+QUANTUMCONF
+
+CONF=/etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/cat << OPENVSWITCH_PLUGIN > $CONF
+[DATABASE]
+sql_connection = mysql://quantum:password@localhost/quantum
+[OVS]
+tenant_network_type = gre 
+tunnel_id_ranges = 1:1000
+enable_tunneling = True
+local_ip = $CONTROLLER_INTERNAL_ADDRESS
+[SECURITYGROUP]
+firewall_driver = quantum.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+OPENVSWITCH_PLUGIN
+ln -s /etc/quantum/plugins/openvswitch/ovs_quantum_plugin.ini /etc/quantum/plugin.ini
+service quantum-server restart
+}
+
+function setup_dashboard() {
+apt-get -y install openstack-dashboard memcached python-memcache
+apt-get -y remove --purge openstack-dashboard-ubuntu-theme
+}
+
 function old_scripts() {
 ##############################################################################
 ## Configure memcached
