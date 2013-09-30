@@ -80,23 +80,25 @@ rabbitmqctl change_password guest $RABBITMQ_PASSWORD
 # OpenStack Identity Service
 #=============================================================================
 function setup_keystone() {
-apt-get install -y keystone python-keystone python-keystoneclient
-CONF=/etc/keystone/keystone.conf
-test -f $CONF.orig || cp $CONF $CONF.orig
-sed \
-   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@localhost\/keystone/" \
-   -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
-   $CONF.orig > $CONF
-service keystone restart
-keystone-manage db_sync
-cat << OPENRC > ~/openrc
-export OS_TENANT_NAME=admin
-export OS_USERNAME=admin
-export OS_PASSWORD=$KEYSTONE_ADMIN_PASSWORD
-export OS_AUTH_URL="http://localhost:5000/v2.0/"
-export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
-export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
-OPENRC
+#apt-get install -y keystone python-keystone python-keystoneclient
+#CONF=/etc/keystone/keystone.conf
+#test -f $CONF.orig || cp $CONF $CONF.orig
+#sed \
+#   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@localhost\/keystone/" \
+#   -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
+#   $CONF.orig > $CONF
+#service keystone restart
+#keystone-manage db_sync
+#cat << OPENRC > ~/openrc
+#export OS_TENANT_NAME=admin
+#export OS_USERNAME=admin
+#export OS_PASSWORD=$KEYSTONE_ADMIN_PASSWORD
+#export OS_AUTH_URL="http://localhost:5000/v2.0/"
+#export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
+#export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
+#OPENRC
+echo "source ~/openrc" >> ~/.bashrc
+
 }
 
 function old_scripts() {
