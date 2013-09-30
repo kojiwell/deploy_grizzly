@@ -77,29 +77,66 @@ rabbitmqctl change_password guest $RABBITMQ_PASSWORD
 }
 
 #=============================================================================
-# OpenStack Identity Service
+# OpenStack Identity Service: Keystone
 #=============================================================================
 function setup_keystone() {
-#apt-get install -y keystone python-keystone python-keystoneclient
-#CONF=/etc/keystone/keystone.conf
-#test -f $CONF.orig || cp $CONF $CONF.orig
-#sed \
-#   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@localhost\/keystone/" \
-#   -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
-#   $CONF.orig > $CONF
-#service keystone restart
-#keystone-manage db_sync
-#cat << OPENRC > ~/openrc
-#export OS_TENANT_NAME=admin
-#export OS_USERNAME=admin
-#export OS_PASSWORD=$KEYSTONE_ADMIN_PASSWORD
-#export OS_AUTH_URL="http://localhost:5000/v2.0/"
-#export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
-#export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
-#OPENRC
+apt-get install -y keystone python-keystone python-keystoneclient
+CONF=/etc/keystone/keystone.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+sed \
+   -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@localhost\/keystone/" \
+   -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
+   $CONF.orig > $CONF
+service keystone restart
+keystone-manage db_sync
+cat << OPENRC > ~/openrc
+export OS_TENANT_NAME=admin
+export OS_USERNAME=admin
+export OS_PASSWORD=$KEYSTONE_ADMIN_PASSWORD
+export OS_AUTH_URL="http://localhost:5000/v2.0/"
+export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
+export OS_SERVICE_TOKEN=$KEYSTONE_ADMIN_TOKEN
+OPENRC
 source ~/openrc
 echo "source ~/openrc" >> ~/.bashrc
 bash -ex keystone_initial_data.sh
+}
+
+#=============================================================================
+# OpenStack Image Service: Glance
+#=============================================================================
+function setup_glance() {
+apt-get -y install glance
+CONF=/etc/glance/glance-api.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/sed \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_INTERNAL_ADDRESS/" \
+        -e 's/%SERVICE_TENANT_NAME%/service/' \
+        -e 's/%SERVICE_USER%/glance/' \
+        -e "s/%SERVICE_PASSWORD%/$KEYSTONE_ADMIN_PASSWORD/" \
+        -e "s#^sql_connection *=.*#sql_connection = mysql://glance:$MYSQL_DB_PASSWORD@localhost/glance#" \
+        -e 's[^#* *config_file *=.*[config_file = /etc/glance/glance-api-paste.ini[' \
+        -e 's/^#*flavor *=.*/flavor = keystone/' \
+        -e 's/^notifier_strategy *=.*/notifier_strategy = rabbit/' \
+        -e "s/^rabbit_host *=.*/rabbit_host = $CONTROLLER_INTERNAL_ADDRESS/" \
+        -e "s/^rabbit_password *=.*/rabbit_password = $RABBITMQ_PASSWORD/" \
+        -e "s/127.0.0.1/$CONTROLLER_PUBLIC_ADDRESS/" \
+        -e "s/localhost/$CONTROLLER_PUBLIC_ADDRESS/" \
+        $CONF.orig > $CONF
+
+CONF=/etc/glance/glance-registry.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/sed \
+        -e "s/^auth_host *=.*/auth_host = $CONTROLLER_INTERNAL_ADDRESS/" \
+        -e 's/%SERVICE_TENANT_NAME%/service/' \
+        -e 's/%SERVICE_USER%/glance/' \
+        -e "s/%SERVICE_PASSWORD%/$KEYSTONE_ADMIN_PASSWORD/" \
+        -e "s/^sql_connection *=.*/sql_connection = mysql:\/\/glance:$MYSQL_DB_PASSWORD@localhost\/glance/" \
+        -e 's/^#* *config_file *=.*/config_file = \/etc\/glance\/glance-registry-paste.ini/' \
+        -e 's/^#*flavor *=.*/flavor=keystone/' \
+        -e "s/127.0.0.1/$CONTROLLER_INTERNAL_ADDRESS/" \
+        -e "s/localhost/$CONTROLLER_INTERNAL_ADDRESS/" \
+        $CONF.orig > $CONF
 }
 
 function old_scripts() {
