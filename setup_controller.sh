@@ -43,28 +43,51 @@ sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
 service mysql restart
 
 mysql -u root -p$MYSQL_ROOT_PASSWORD <<EOF
-DROP DATABASE IF EXISTS nova;
 CREATE DATABASE nova;
 GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
-DROP DATABASE IF EXISTS cinder;
 CREATE DATABASE cinder;
 GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
-DROP DATABASE IF EXISTS glance;
 CREATE DATABASE glance;
 GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
-DROP DATABASE IF EXISTS keystone;
 CREATE DATABASE keystone;
 GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
-DROP DATABASE IF EXISTS quantum;
 CREATE DATABASE quantum;
 GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'localhost' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
 GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'$MYSQL_ALLOWED_SUBNET' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+FLUSH PRIVILEGES;
+EOF
+}
+
+function recreate_mysql_database() {
+mysql -u root -p$MYSQL_ROOT_PASSWORD <<EOF
+DROP DATABASE IF EXISTS nova;
+CREATE DATABASE nova;
+GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+DROP DATABASE IF EXISTS cinder;
+CREATE DATABASE cinder;
+GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+DROP DATABASE IF EXISTS glance;
+CREATE DATABASE glance;
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+DROP DATABASE IF EXISTS keystone;
+CREATE DATABASE keystone;
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+DROP DATABASE IF EXISTS quantum;
+CREATE DATABASE quantum;
+GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'localhost' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'$MYSQL_ALLOWED_SUBNET' \
+            IDENTIFIED BY '$MYSQL_DB_PASSWORD';
 FLUSH PRIVILEGES;
 EOF
 }
