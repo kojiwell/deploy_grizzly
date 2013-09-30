@@ -9,10 +9,14 @@ source setuprc
 HTTP_PROXY=$http_proxy
 unset http_proxy
 
-##############################################################################
-## Common services
-##############################################################################
+#=============================================================================
+# Common services
+#=============================================================================
 
+#-----------------------------------------------------------------------------
+# Operating System
+#-----------------------------------------------------------------------------
+function setup_operating_system() {
 CONF=/etc/sysctl.conf
 test -f $CONF.orig || cp $CONF $CONF.orig
 echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
@@ -21,14 +25,17 @@ echo 'net.ipv4.conf.default.rp_filter = 0' >> /etc/sysctl.conf
 service networking restart
 sysctl -e -p /etc/sysctl.conf
 
-export DEBIAN_FRONTEND=noninteractive
-
 /usr/bin/aptitude -y update
 /usr/bin/aptitude -y upgrade
-/usr/bin/aptitude -y install \
-    ntp \
-    python-mysqldb \
-    mysql-server
+/usr/bin/aptitude -y install ntp
+}
+
+#-----------------------------------------------------------------------------
+# MySQL Database Service
+#-----------------------------------------------------------------------------
+function setup_mysql_database() {
+export DEBIAN_FRONTEND=noninteractive
+/usr/bin/aptitude -y install python-mysqldb mysql-server
 
 mysqladmin -u root password $MYSQL_ROOT_PASSWORD
 sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
@@ -54,7 +61,31 @@ GRANT ALL PRIVILEGES ON quantum.* TO 'quantum'@'$MYSQL_ALLOWED_SUBNET' \
 	IDENTIFIED BY '$MYSQL_DB_PASSWORD';
 FLUSH PRIVILEGES;
 EOF
+}
 
+#-----------------------------------------------------------------------------
+# RabbitMQ Messaging Service
+#-----------------------------------------------------------------------------
+function setup_rabbitmq() {
+apt-get install -y rabbitmq-server
+rabbitmqctl change_password guest $RABBITMQ_PASSWORD
+}
+
+#=============================================================================
+# OpenStack Identity Service
+#=============================================================================
+function setup_keystone() {
+apt-get install -y keystone python-keystone python-keystoneclient
+CONF=/etc/keystone/keystone.conf
+test -f $CONF.orig || cp $CONF $CONF.orig
+/bin/sed \
+        -e "s/^#*connection *=.*/connection = mysql:\/\/keystone:$MYSQL_DB_PASSWORD@$CONTROLLER_INTERNAL_ADDRESS\/keystone/" \
+        -e "s/^#* *admin_token *=.*/admin_token = $KEYSTONE_ADMIN_TOKEN/" \
+        $CONF.orig > $CONF
+
+}
+
+function old_scripts() {
 ##############################################################################
 ## Configure memcached
 ##############################################################################
@@ -501,3 +532,4 @@ source admin_credential
 ##############################################################################
 
 /sbin/reboot
+}
