@@ -9,6 +9,8 @@ This script installs OpenStack Grizzly on Ubuntu-13.04
 
 How to
 ------
+First of all, update ```/etc/hosts```.
+
 Download.
 ```
 git clone https://github.com/kjtanaka/deploy_grizzly.git
