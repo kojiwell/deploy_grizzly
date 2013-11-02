@@ -9,7 +9,8 @@ This script installs OpenStack Grizzly on Ubuntu-13.04
 
 How to
 ------
-First of all, update ```/etc/hosts```.
+First of all, update ```/etc/hosts```. If the hostname isn't resolvable,
+Nova Network will fail to create a bridge.
 
 Download.
 ```
